@@ -1,0 +1,68 @@
+###############################################################################
+- name: Configuring installation parameters
+  block:
+    - name: Collecting operating system info
+      win_shell: "$env:SystemDrive"
+      register: system_drive
+
+    - name: Configuring installation parameters
+      set_fact:
+        install_dir: "{{ system_drive.stdout | trim }}{{install_dir}}"
+
+    - name: Validating install directory
+      ansible.windows.win_file:
+        path: "{{ install_dir }}"
+        state: directory
+
+  rescue:
+    - name: Failed to configure installation parameters
+      fail:
+        msg: "Unable to create folder {{ install_dir }}"
+
+
+###############################################################################
+- name: Copy service binary to host
+  ansible.windows.win_copy:
+    src: "SampleService.exe"
+    dest: "{{ install_dir }}\\{{service_binary_name}}.exe"
+  register: copy_result
+
+
+###############################################################################
+- name: Install service
+  ansible.windows.win_service:
+    name: "{{ service_name }}"
+    path: |
+       {{ install_dir }}\{{service_binary_name}}.exe -interval {{ logging_interval }} -log {{ log_file_path }}
+    display_name: "{{ service_display_name }}"
+    description: |
+      {{ service_description }} (Logging Interval: {{ logging_interval }})
+    start_mode: auto
+    username: "{{ service_user | default('LocalSystem') }}"
+    password: "{{ service_password | default('') }}"
+    state: started
+
+
+###############################################################################
+- name: Collect info about service
+  ansible.windows.win_service_info:
+    name: "{{ item }}"
+  register: svc_info
+  loop:
+    - "{{ service_name }}"
+
+
+###############################################################################
+- name: Print service status
+  vars:
+    output: |
+        ==================================================
+        Name: {{ item.display_name | default('n/a') }}
+        state: {{ item.state | default('n/a') }}
+        start_mode: {{ item.start_mode | default('n/a') }}
+        path: {{ item.path | default('n/a') }}
+  debug:
+    msg: "{{ output }}"
+  loop: "{{ svc_info.results | map(attribute='services') | sum(start=[]) }}"
+  loop_control:
+    label: "{{ item.name }}"

@@ -1,0 +1,27 @@
+#
+#   Usage:
+#   ansible-playbook -i inventory/dev/hosts.ini playbooks/dev.yml -e "config=remove"
+#
+###############################################################################
+- name: Gathering valid config params
+  set_fact:
+    params: [install, remove, status, stop, restart]
+
+
+###############################################################################
+- name: Attempt to trigger task
+  block:
+    - name: Running "{{ config }}" task
+      include_tasks: "{{ config }}.yml"
+
+  rescue:
+    - name: Report failed task
+      fail:
+        msg: |
+          {% if config not in params %}
+          Invalid config "{{ config | default("undefined") }}". Expected: {{ params }}
+
+          {% else %}
+          Task "{{ config }}" failed during execution.
+
+          {% endif %}

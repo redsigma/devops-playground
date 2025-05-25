@@ -1,0 +1,36 @@
+###############################################################################
+- name: Collect info about service
+  ansible.windows.win_service_info:
+    name: "{{ item }}"
+  register: svc_info
+  loop:
+    - "{{ service_name }}"
+
+
+###############################################################################
+- name: Report service status
+  block:
+      - name: Check if service is invalid
+        fail:
+          msg: "Cannot find service '{{ item.item }}'"
+        loop: "{{ svc_info.results }}"
+        loop_control:
+          label: "{{ item.item }}"
+        when: item.services | count == 0
+
+  always:
+    - name: Print service status
+      debug:
+        msg: |
+          ==================================================
+          Name: {{ item.display_name | default('n/a') }}
+          State: {{ item.state | default('n/a') }}
+          Start mode: {{ item.start_mode | default('n/a') }}
+          Path: {{ item.path | default('n/a') }}
+
+      loop: "{{ svc_info.results | map(attribute='services') | list | sum(start=[]) }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+
+

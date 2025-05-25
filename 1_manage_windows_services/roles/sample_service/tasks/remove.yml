@@ -1,0 +1,24 @@
+###############################################################################
+- name: Collect info about service
+  ansible.windows.win_service_info:
+    name: "{{ service_name }}"
+  register: svc_info
+
+
+###############################################################################
+- name: Remove service
+  ansible.windows.win_service:
+    name: "{{ service_name }}"
+    state: absent
+  when: svc_info.exists
+  ignore_errors: true # if service is pending deletion we can skip this
+
+
+###############################################################################
+- name: Delete service install directory
+  vars:
+    service_folder: "{{ svc_info.services[0].path | regex_search('^.*?\\.exe') | regex_replace('\\\\', '/') | dirname }}"
+  ansible.windows.win_file:
+    path: "{{ service_folder }}"
+    state: absent
+  when: svc_info.services | count > 0

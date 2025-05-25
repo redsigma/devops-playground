@@ -1,0 +1,4 @@
+- name: Deploy SampleService to Testing
+  hosts: windows_test
+  roles:
+    - sample_service

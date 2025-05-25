@@ -1,0 +1,4 @@
+- name: Deploy SampleService to Production
+  hosts: windows_prod
+  roles:
+    - sample_service

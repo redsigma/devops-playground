@@ -1,0 +1,30 @@
+###############################################################################
+- name: Collect info about service
+  ansible.windows.win_service_info:
+    name: "{{ service_name }}"
+  register: svc_info
+
+
+###############################################################################
+- name: Restarting service
+  ansible.windows.win_service:
+    name: "{{ service_name }}"
+    state: restarted
+  when: svc_info.exists
+
+
+###############################################################################
+- name: Print service status
+  vars:
+    output: |
+        ==================================================
+        Name: {{ item.display_name | default('n/a') }}
+        state: {{ item.state | default('n/a') }}
+        start_mode: {{ item.start_mode | default('n/a') }}
+        path: {{ item.path | default('n/a') }}
+  debug:
+    msg: "{{ output }}"
+  loop: "{{ svc_info.services }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: svc_info.exists

@@ -1,0 +1,4 @@
+- name: Deploy SampleService to Development
+  hosts: windows_dev
+  roles:
+    - sample_service_with_params

@@ -1,0 +1,11 @@
+# directory structure wthiout drive letter
+install_dir: \Services\SampleService
+
+service_name: "SampleServiceDefault"
+service_binary_name: "SampleService"
+service_display_name: "SampleService"
+
+service_description: "Custom logging service"
+
+service_user: LocalSystem
+service_password: ""
