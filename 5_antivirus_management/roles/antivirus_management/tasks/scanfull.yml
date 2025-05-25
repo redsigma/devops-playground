@@ -1,0 +1,4 @@
+###############################################################################
+- name: Trigger Full Scan via Windows Defender
+  win_defender_util:
+    action: fullscan

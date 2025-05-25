@@ -1,0 +1,4 @@
+- name: Execute windows defender operations
+  hosts: windows_prod
+  roles:
+    - antivirus_management

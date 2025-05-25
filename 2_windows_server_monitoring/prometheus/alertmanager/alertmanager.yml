@@ -28,7 +28,7 @@ receivers:
     slack_configs:
       - send_resolved: true
         # https://api.slack.com/messaging/webhooks
-        api_url: 'https://hooks.slack.com/services/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'
+        api_url: 'https://hooks.slack.com/services/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D'
         channel: '#alerts'
         title: '{{ .CommonLabels.alertname }}'
         icon_emoji: '{{ if eq .Status "firing" }} :fire: {{ else }} :white_check_mark: {{end}} '
@@ -48,8 +48,8 @@ receivers:
 
   - name: mail
     email_configs:
-      - to: 'cucristi@gmail.com'
-        from: 'cucristi@gmail.com'
+      - to: 'example@gmail.com'
+        from: 'example@gmail.com'
         send_resolved: true
 
 templates:

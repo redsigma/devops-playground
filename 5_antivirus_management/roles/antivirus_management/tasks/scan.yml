@@ -1,0 +1,4 @@
+###############################################################################
+- name: Trigger Quick Scan via Windows Defender
+  win_defender_util:
+    action: quickscan

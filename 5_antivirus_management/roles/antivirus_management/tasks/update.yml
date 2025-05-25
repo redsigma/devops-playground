@@ -1,0 +1,4 @@
+###############################################################################
+- name: Update Windows Defender Signature
+  win_defender_util:
+    action: update
