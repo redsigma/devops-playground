@@ -1,0 +1,5 @@
+
+windows_exporter_download_msi: "https://github.com/prometheus-community/windows_exporter/releases/download/v0.30.6/windows_exporter-0.30.6-amd64.msi"
+
+windows_exporter_port: 9182
+windows_updates_scrape_interval: 1H

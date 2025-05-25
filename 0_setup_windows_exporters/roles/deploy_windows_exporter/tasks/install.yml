@@ -1,0 +1,195 @@
+###############################################################################
+- name: Preparing configuration
+  set_fact:
+    install_path: "{{ ansible_env.ProgramFiles }}"
+
+
+###############################################################################
+- name: Checking for windows_exporter service
+  ansible.windows.win_service_info:
+    name: windows_exporter
+  register: exporter_status
+  ignore_errors: yes
+
+
+###############################################################################
+- name: Preparing location for windows_exporter install
+  win_file:
+    path: "{{ ansible_env.TEMP }}/windows_exporter"
+    state: directory
+  when: not exporter_status.exists
+
+
+###############################################################################
+- name: Downloading windows_exporter archive
+  win_get_url:
+    url: "{{ windows_exporter_download_msi }}"
+    dest: "{{ ansible_env.TEMP }}/windows_exporter/installer.msi"
+  when: not exporter_status.exists
+
+
+###############################################################################
+- name: Installing windows_exporter
+  win_package:
+    path: "{{ ansible_env.TEMP }}/windows_exporter/installer.msi"
+    state: present
+    arguments: /quiet /norestart
+  when: not exporter_status.exists
+
+
+###############################################################################
+- name: Cleanup leftover files
+  win_file:
+    path: "{{ ansible_env.TEMP }}/windows_exporter"
+    state: absent
+  when: not exporter_status.exists
+
+
+###############################################################################
+# useful for private networks
+#
+- name: Allowing inbound connection to windows_exporter
+  win_firewall_rule:
+    name: "Allow Windows Exporter"
+    localport: "{{ windows_exporter_port }}"
+    protocol: tcp
+    direction: in
+    action: allow
+    profile: private
+    state: present
+
+
+###############################################################################
+- name: Creating windows_exporter config
+  win_copy:
+    dest: "{{ install_path }}/windows_exporter/config.yaml"
+    content: |
+      ---
+      collectors:
+        enabled: cpu,cs,memory,logical_disk,physical_disk,net,os,service,system,update,textfile
+      collector:
+        service:
+          include: "windows_exporter"
+        scheduled_task:
+          include: /Microsoft/.+
+        textfile:
+          directory: "{{ install_path }}\textfile_inputs"
+      log:
+        level: debug
+      scrape:
+        timeout-margin: 0.5
+      telemetry:
+        path: /metrics
+        max-requests: 5
+      web:
+        listen-address: ":{{ windows_exporter_port }}"
+
+
+###############################################################################
+- name: Configure windows_exporter service
+  win_regedit:
+    path: HKLM:\SYSTEM\CurrentControlSet\Services\windows_exporter
+    name: ImagePath
+    data: '"{{ install_path }}\windows_exporter\windows_exporter.exe" --config.file="{{ install_path }}\windows_exporter\config.yaml"'
+    type: string
+
+
+###############################################################################
+- name: Configuring textfile scrapers
+  win_copy:
+    src: "files/{{ item }}"
+    dest: "{{ install_path }}/windows_exporter/"
+  loop:
+    - win-update-metrics.ps1
+    - win-defender-metrics.ps1
+
+
+###############################################################################
+- name: Install Windows Update PShell module
+  win_shell: |
+    if (-not (Get-InstalledModule -Name PSWindowsUpdate -ErrorAction SilentlyContinue)) {
+      Install-PackageProvider -Name NuGet -Force
+      Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+      Install-Module -Name PSWindowsUpdate -Force
+    }
+  args:
+    executable: powershell.exe
+  register: psupdate_result
+  changed_when: "'installed' in psupdate_result.stdout.lower()"
+
+
+###############################################################################
+- name: Register windows update metrics cron task
+  win_scheduled_task:
+    name: "windows_update_metrics"
+    description: "Query for Windows Update metrics for Prometheus"
+    enabled: true
+    actions:
+      - Path: "powershell.exe"
+        Arguments: '-NoProfile -ExecutionPolicy Bypass -File "{{ install_path }}/windows_exporter/win-update-metrics.ps1"'
+    triggers:
+      - type: boot
+      - type: daily
+        start_boundary: "2025-01-01T00:00:00"
+        repetition:
+          interval: PT{{ windows_updates_scrape_interval }}
+          duration: P1D                 # repeat 1 day (forever)
+          stop_at_duration_end: false
+    disallow_start_if_on_batteries: false
+    stop_if_going_on_batteries: false
+    execution_time_limit: PT0S            # dont expire
+    start_when_available: true            # start immediately
+    run_only_if_network_available: false
+    username: "SYSTEM"
+    run_level: highest
+    state: present
+
+
+###############################################################################
+# https://learn.microsoft.com/en-us/defender-endpoint/troubleshoot-microsoft-defender-antivirus
+#
+# @note:  this task runs when windows defender finishes a scan or in case of
+#         malware or misconfiguration events
+#
+- name: Register windows defender metrics cron task
+  win_scheduled_task:
+    name: "windows_defender_metrics"
+    description: "Query for Windows Defender metrics for Prometheus"
+    enabled: true
+    actions:
+      - Path: "powershell.exe"
+        Arguments: '-NoProfile -ExecutionPolicy Bypass -File "{{ install_path }}/windows_exporter/win-defender-metrics.ps1"'
+    triggers:
+      - type: boot
+      - type: event
+        delay: PT5M
+        subscription: |
+          <QueryList>
+            <Query Id="0" Path="Microsoft-Windows-Windows Defender/Operational">
+              <Select Path="Microsoft-Windows-Windows Defender/Operational">
+                *[System[(EventID=1116 or EventID=1006 or EventID=1008 or EventID=1015 or EventID=2002 or EventID=2014 or EventID=5007 or EventID=1001 or EventID=1002)]]
+              </Select>
+            </Query>
+          </QueryList>
+        repetition:
+          interval: PT1H
+          duration: P1D
+          stop_at_duration_end: false
+    disallow_start_if_on_batteries: false
+    stop_if_going_on_batteries: false
+    execution_time_limit: PT0S
+    start_when_available: true
+    run_only_if_network_available: false
+    username: "SYSTEM"
+    run_level: highest
+    restart_count: 3
+    restart_interval: PT5M
+    state: present
+
+
+###############################################################################
+- name: Starting windows_exporter service
+  win_service:
+    name: windows_exporter
+    start_mode: auto
+    state: restarted

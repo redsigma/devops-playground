@@ -1,0 +1,4 @@
+- name: Install windows exporter to Development
+  hosts: windows_dev
+  roles:
+    - deploy_windows_exporter
