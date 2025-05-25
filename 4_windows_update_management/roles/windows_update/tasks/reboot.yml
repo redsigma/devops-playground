@@ -1,0 +1,69 @@
+###############################################################################
+- name: Reboot the Windows machine
+  win_reboot:
+    pre_reboot_delay: 5
+    post_reboot_delay: 5
+    reboot_timeout: 100  # fallback
+  register: reboot_result
+  ignore_errors: true # we pool ourselves
+
+
+###############################################################################
+- name: Wait for the host to be reachable
+  wait_for_connection:
+    delay: 5
+    timeout: 600      # wait time
+    sleep: 3          # pool every 3 seconds
+
+
+###############################################################################
+- name: Confirm system ready
+  win_shell: 'hostname'
+  register: reboot_hostname
+  changed_when: false
+
+- name: Show reboot completion status
+  debug:
+    msg: "Reboot complete. Hostname is {{ reboot_hostname.stdout }}"
+
+
+# ###############################################################################
+- name: Check if windows updates require reboot
+  win_updates:
+    state: searched
+  register: update_search_result
+  changed_when: false
+
+- name: Check and report reboot status cleanly
+  block:
+    - name: Checking for reboot status
+      win_shell: |
+        $pending = 0
+
+        if (Test-Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending") {
+            $pending = 1
+        }
+
+        if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired") {
+            $pending = 1
+        }
+
+        if ($pending -eq 1) {
+            exit 1
+        } else {
+            Write-Output "✅ No reboot is required."
+        }
+      register: reboot_check_result
+      changed_when: false
+      failed_when: reboot_check_result.rc != 0
+      no_log: true
+
+    - name: Print reboot check result
+      debug:
+        msg: "{{ reboot_check_result.stdout }}"
+
+  rescue:
+    - name: Failure a reboot is needed
+      fail:
+        msg: |
+          ❌ A system reboot is still pending. Please reboot again.

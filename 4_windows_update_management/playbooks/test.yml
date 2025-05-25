@@ -1,0 +1,4 @@
+- name:  Apply windows updates to Test
+  hosts: windows_test
+  roles:
+    - windows_update

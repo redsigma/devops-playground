@@ -1,0 +1,36 @@
+###############################################################################
+- name: Configuring parameters
+  block:
+    - name: Collecting operating system info
+      win_shell: "$env:SystemDrive"
+      register: system_drive
+
+    - name: Configuring parameters
+      set_fact:
+        logs_dir: "{{ system_drive.stdout | trim }}/Windows/Temp"
+
+    - name: Validating logs directory
+      ansible.windows.win_file:
+        path: "{{ logs_dir }}"
+        state: directory
+
+  rescue:
+    - name: Failed to create windows update log folder
+      fail:
+        msg: "Unable to create folder {{ logs_dir }}"
+
+
+###############################################################################
+- name: Check for missing updates
+  win_updates:
+    state: searched
+    log_path: "{{ logs_dir }}/win_updates.log"
+  register: update_results
+
+
+- name: Report missing updates
+  debug:
+    msg: |
+      {% for k in update_results.updates %}
+      {{ update_results.updates[k].title }}
+      {% endfor %}

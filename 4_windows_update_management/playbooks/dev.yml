@@ -1,0 +1,4 @@
+- name: Apply windows updates to Development
+  hosts: windows_dev
+  roles:
+    - windows_update

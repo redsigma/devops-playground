@@ -1,0 +1,6 @@
+# how many time to retry failed updates
+max_windows_update_retries: 5
+
+# KB ids that must be installed
+important_updates:
+  # - KB5021234

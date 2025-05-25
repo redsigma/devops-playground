@@ -1,0 +1,4 @@
+- name:  Apply windows updates to Production
+  hosts: windows_prod
+  roles:
+    - windows_update
