@@ -1,0 +1,18 @@
+groups:
+  - name: windows_exporter_rules
+    rules:
+      - record: node:cpu_usage:rate5m:percent
+        expr: 100 * (1 - avg(rate(windows_cpu_time_total{mode="idle"}[5m])) by (instance))
+
+      - record: node:disk_usage:percent
+        expr: |
+          (windows_logical_disk_size_bytes - windows_logical_disk_free_bytes) / windows_logical_disk_size_bytes
+
+      - record: node:net_throughput:rate5m:bytes_per_sec
+        expr: rate(windows_net_bytes_received_total[5m]) + rate(windows_net_bytes_sent_total[5m])
+
+      - record: node:memory_usage:percent
+        expr: 100 * (1 - (windows_memory_available_bytes / windows_memory_physical_total_bytes))
+
+      - record: node:windows_virtual_memory_headroom:percent
+        expr: 100 * ((windows_memory_commit_limit - windows_memory_committed_bytes) / windows_memory_commit_limit)

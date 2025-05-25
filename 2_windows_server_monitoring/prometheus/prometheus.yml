@@ -1,0 +1,26 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+rule_files:
+  - "alerts/prometheus_rules.yml"
+  - "alerts/alert.rules.yml"
+  - "alerts/alert.windows_update.yml"
+  - "alerts/alert.windows_defender.yml"
+
+
+alerting:
+  alertmanagers:
+    - static_configs:
+      - targets:
+        - alertmanager:9093
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+        - localhost:9090
+
+  - job_name: "windows_exporters"
+    static_configs:
+      - targets: ["192.168.1.5:9182"]

@@ -1,0 +1,11 @@
+groups:
+  - name: node_alerts_windows_update
+    rules:
+      - alert: found_security_windows_update
+        expr: win_upgrades_pending{category=~"security"} > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Found {{ $value }} pending security windows updates on {{ $labels.instance }}"
+          description: "Check if there are more than 5 security updates pending."

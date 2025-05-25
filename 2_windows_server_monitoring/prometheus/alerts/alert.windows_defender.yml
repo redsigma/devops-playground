@@ -1,0 +1,22 @@
+groups:
+  - name: node_alerts_windows_defender
+    rules:
+      - alert: defender_status
+        expr: count(win_defender_enabled < 1) by (feature)
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Found disabled features for windows defender: {{ $labels.feature }}"
+          description: "Check if windows defender has any components turned off."
+
+      - alert: defender_malware_found
+        expr: |
+          sum by (category,severity) (
+            rate(win_defender_threat_total{severity=~"extreme|moderate"}[5m])
+          )
+        for: 3m
+        annotations:
+          summary: "Found {{ $labels.severity }} malware: {{ $labels.category }}"
+          description: "Check if windows defender has any components turned off."
+

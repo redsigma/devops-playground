@@ -1,0 +1,93 @@
+# config doc:
+#   https://github.com/prymitive/karma/blob/eca4d7e67ea462f5c10c9cca4e4d95043ec64605/internal/config/models.go
+#   https://github.com/prymitive/karma/blob/main/docs/CONFIGURATION.md
+
+alertmanager:
+  interval: 60s
+  servers:
+  - name: alertmanager
+    proxy: true  # for CORS
+    readonly: false
+    timeout: 10s
+    uri: http://alertmanager:9093
+
+annotations:
+  actions:
+    - description
+  default:
+    hidden: true
+  hidden: []
+  keep: []
+  order: []
+  strip: []
+  visible:
+    - summary
+    - description
+
+filters:
+  default: []
+labels:
+  color:
+    static:
+      - job
+      - '@receiver'
+      - instance
+    unique:
+      - severity
+    custom:
+      severity:
+        - value: info
+          color: "#87c4e0"
+        - value: warning
+          color: "#ffae42"
+        - value: critical
+          color: "#ff0000"
+  keep: []
+  strip: []
+
+silences:
+  expired: 15m  # show alerts that expired in last X minutes
+  comments:
+    linkDetect:
+      rules:
+        # convert text to a clickable jira link
+        - regex: "(DEVOPS-[0-9]+)"
+          uriTemplate: https://jira.example.com/browse/$1
+
+listen:
+  address: 0.0.0.0
+  port: 8080
+  prefix: /
+
+log:
+  config: false
+  level: info
+
+receivers:
+  keep: []
+  strip:
+    - slack  # prevent duplicate alerts due to multiple receivers having it
+
+
+##############################################################################
+history:
+  enabled: true
+  timeout: 20s
+  workers: 5
+  rewrite: []
+
+##############################################################################
+# note: config options might not display properly on web interface
+ui:
+  refresh: 25s
+  animations: true
+  colorTitlebar: true
+  theme: "dark"
+  alertsPerGroup: 8
+  multiGridLabel: "severity"
+
+grid:
+  sorting:
+    order: startsAt  # by timestamp
+    reverse: false
+    label: alertname

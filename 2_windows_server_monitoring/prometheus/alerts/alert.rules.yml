@@ -1,0 +1,70 @@
+groups:
+  - name: node_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: node:cpu_usage:rate5m:percent > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is above 90%"
+
+
+      - alert: HighMemoryUsage
+        expr: node:memory_usage:percent > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is above 90%"
+
+      - alert: DiskAlmostFull
+        expr: node:disk_usage:percent > 0.95
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk is almost full on {{ $labels.instance }} ({{ $labels.volume }})"
+          description: "Disk usage is above 95% on volume {{ $labels.volume }}."
+
+      - alert: DiskLowSpace
+        expr: node:disk_usage:percent > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space is low on {{ $labels.instance }} ({{ $labels.volume }})"
+          description: "Disk usage is above 80% on volume {{ $labels.volume }}."
+
+
+
+      - alert: NodeDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Target down: {{ $labels.instance }}"
+          description: "{{ $labels.job }} on {{ $labels.instance }} is not responding for 2 minutes."
+
+  - name: system_alerts
+    rules:
+      - alert: TooManyProcesses
+        expr: windows_system_processes > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High process count on {{ $labels.instance }}"
+          description: "More than 300 processes detected. May indicate runaway forks or load issues."
+
+      - alert: LongDiskQueue
+        expr: windows_logical_disk_current_disk_queue_length > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk I/O bottleneck on {{ $labels.instance }}"
+          description: "Disk queue length is greater than 5 for more than 3 minutes."
